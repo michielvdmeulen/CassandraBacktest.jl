@@ -1,3 +1,6 @@
 [deps]
 CassandraBacktest = "a1a55c07-1351-412e-8c07-6927ef52b1ed"
 Documenter = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
+
+[sources.CassandraBacktest]
+path = ".."

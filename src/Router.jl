@@ -6,12 +6,13 @@ end
 mutable struct SimulatedOrderRouter <: AbstractOrderRouter
     slippage::SlippageModel
     pending_orders::Vector{_PendingOrder}
+    pending_scratch::Vector{_PendingOrder}
     filled_orders::Vector{Fill}
     next_ref::Int
 end
 
 function SimulatedOrderRouter(; slippage::SlippageModel = SlippageModel())
-    return SimulatedOrderRouter(slippage, _PendingOrder[], Fill[], 1)
+    return SimulatedOrderRouter(slippage, _PendingOrder[], _PendingOrder[], Fill[], 1)
 end
 
 function submit!(router::SimulatedOrderRouter, order::Order)
@@ -41,7 +42,8 @@ function process_event!(router::SimulatedOrderRouter, event::MarketEvent)
     event_mid = _event_mid(event)
     spread = _event_spread(event)
     trade_price = _event_trade_price(event)
-    remaining = _PendingOrder[]
+    remaining = router.pending_scratch
+    empty!(remaining)
 
     for pending in router.pending_orders
         order = pending.order
@@ -69,7 +71,7 @@ function process_event!(router::SimulatedOrderRouter, event::MarketEvent)
         end
     end
 
-    router.pending_orders = remaining
+    router.pending_orders, router.pending_scratch = remaining, router.pending_orders
     return router
 end
 

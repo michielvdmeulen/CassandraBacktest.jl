@@ -1,9 +1,13 @@
-struct BacktestConfig
-    feed::AbstractMarketFeed
-    router::AbstractOrderRouter
+struct BacktestConfig{
+    F <: AbstractMarketFeed,
+    R <: AbstractOrderRouter,
+    H <: Tuple
+}
+    feed::F
+    router::R
     start_time::DateTime
     end_time::DateTime
-    handlers::Vector{Function}
+    handlers::H
 end
 
 function BacktestConfig(;
@@ -14,7 +18,7 @@ function BacktestConfig(;
         handlers::AbstractVector{<:Function} = Function[]
 )
     start_time <= end_time || throw(ArgumentError("start_time must not exceed end_time"))
-    return BacktestConfig(feed, router, start_time, end_time, collect(handlers))
+    return BacktestConfig(feed, router, start_time, end_time, Tuple(handlers))
 end
 
 struct BacktestResult
@@ -24,13 +28,15 @@ struct BacktestResult
     elapsed_ns::Int64
 end
 
+mutable struct _RunnerState
+    cash::Float64
+    positions::Dict{String, Int}
+    last_event::Union{Nothing, MarketEvent}
+end
+
 function run!(config::BacktestConfig)
     started_ns = time_ns()
-    store = Dict{Symbol, Any}(
-        :cash => 0.0,
-        :position => Dict{String, Int}(),
-        :last_event => nothing
-    )
+    state = _RunnerState(0.0, Dict{String, Int}(), nothing)
     equity_curve = Tuple{DateTime, Float64}[]
     events_processed = 0
 
@@ -42,18 +48,18 @@ function run!(config::BacktestConfig)
         timestamp > config.end_time && break
 
         for handler in config.handlers
-            handler(event, store, config.router)
+            handler(event, state, config.router)
         end
 
         if config.router isa SimulatedOrderRouter
             existing_fill_count = length(config.router.filled_orders)
             process_event!(config.router, event)
-            _apply_new_fills!(store, config.router.filled_orders, existing_fill_count + 1)
+            _apply_new_fills!(state, config.router.filled_orders, existing_fill_count + 1)
         end
 
         events_processed += 1
-        push!(equity_curve, (timestamp, store[:cash]))
-        store[:last_event] = event
+        push!(equity_curve, (timestamp, state.cash))
+        state.last_event = event
     end
 
     elapsed = time_ns() - started_ns
@@ -62,19 +68,19 @@ function run!(config::BacktestConfig)
 end
 
 function _apply_new_fills!(
-        store::Dict{Symbol, Any},
+        state::_RunnerState,
         all_fills::Vector{Fill},
         from_index::Int
 )
-    from_index > length(all_fills) && return store
-    positions = store[:position]
+    from_index > length(all_fills) && return state
+    positions = state.positions
     for idx in from_index:length(all_fills)
         fill = all_fills[idx]
         direction = fill.side === Buy ? 1 : -1
         positions[fill.symbol] = get(positions, fill.symbol, 0) + direction * fill.quantity
         cash_delta = direction == 1 ? -(fill.quantity * fill.price + fill.fees) :
                      (fill.quantity * fill.price - fill.fees)
-        store[:cash] += cash_delta
+        state.cash += cash_delta
     end
-    return store
+    return state
 end

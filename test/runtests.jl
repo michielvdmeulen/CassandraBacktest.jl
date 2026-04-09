@@ -1,6 +1,11 @@
 using CassandraBacktest
+using SafeTestsets
 using Test
 
-@testset "CassandraBacktest.jl" begin
-    # Write your tests here.
+@safetestset "Router" begin
+    include("router_test.jl")
+end
+
+@safetestset "Runner" begin
+    include("runner_test.jl")
 end

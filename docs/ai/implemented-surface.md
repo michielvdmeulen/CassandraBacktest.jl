@@ -1,15 +1,54 @@
 # CassandraBacktest Implemented Surface
 
-Last changed: 2026-04-09T12:43:39+02:00
+Last changed: 2026-04-09T18:55:00+02:00
 
-This file is for Codex sessions working in `CassandraBacktest.jl`.
-It should summarize what the package currently implements at a high level.
+## Ecosystem Role
 
-Keep this file current as the package evolves.
+`CassandraBacktest.jl` provides the replay/backtest skeleton for Cassandra.
+It defines shared interfaces that both live and replay execution paths can target.
 
-Suggested content:
+## Public Surface
 
-- package role in the wider system
-- public surface that exists today
-- notable constraints or non-goals
-- current gaps or unfinished areas that still matter for planning
+Implemented interfaces:
+
+- `AbstractMarketFeed`
+- `AbstractOrderRouter`
+- required feed methods: `next_event!`, `current_time`, `is_exhausted`, `subscribe!`, `unsubscribe!`
+- required router methods: `submit!`, `cancel!`, `replace!`, `fills`
+
+Implemented event and order models:
+
+- `MarketEvent` plus concrete events:
+  - `QuoteEvent`
+  - `TradeEvent`
+  - `BarEvent`
+  - `ChainEvent`
+  - `SessionEvent`
+- `Side` (`Buy`, `Sell`)
+- `Order`, `OrderRef`, `Fill`
+- `SlippageModel`
+
+Implemented replay primitives:
+
+- `SimulatedOrderRouter <: AbstractOrderRouter`
+- `process_event!(router, event)` for simulated fill progression
+- `BacktestConfig`
+- `BacktestResult`
+- `run!(config)` skeleton loop with:
+  - feed exhaustion/time-window handling
+  - ordered handler dispatch
+  - simulated router fill processing
+  - equity-curve accumulation
+
+## Current Behavior Notes
+
+- Limit orders fill at limit price when market trades through.
+- Market orders fill at next quote mid plus slippage.
+- No partial fills are modeled.
+- Runner uses a minimal internal state dictionary and is designed for future handler expansion.
+
+## Remaining Gaps
+
+- Historical data loading and feed adapters are not implemented.
+- Strategy/prediction handlers are not implemented.
+- Analytics beyond fill ledger and cash-based equity curve are deferred.

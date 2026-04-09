@@ -3,6 +3,9 @@ uuid = "a1a55c07-1351-412e-8c07-6927ef52b1ed"
 authors = ["Michiel van der Meulen <michielvdmeulen@gmail.com> and contributors"]
 version = "0.0.1"
 
+[deps]
+Dates = "ade2ca70-3891-5945-98fb-dc099432e06a"
+
 [compat]
 julia = "1.12"
 

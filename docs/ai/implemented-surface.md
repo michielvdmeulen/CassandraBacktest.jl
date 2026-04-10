@@ -1,6 +1,6 @@
 # CassandraBacktest Implemented Surface
 
-Last changed: 2026-04-09T18:55:00+02:00
+Last changed: 2026-04-10T10:41:20+02:00
 
 ## Ecosystem Role
 
@@ -45,7 +45,8 @@ Implemented replay primitives:
 - Limit orders fill at limit price when market trades through.
 - Market orders fill at next quote mid plus slippage.
 - No partial fills are modeled.
-- Runner uses a minimal internal state dictionary and is designed for future handler expansion.
+- Runner keeps typed mutable state for cash/positions and typed handler storage, reducing
+  per-event dynamic dispatch and allocations.
 
 ## Remaining Gaps
 
